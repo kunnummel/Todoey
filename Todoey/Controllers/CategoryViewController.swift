@@ -7,15 +7,15 @@
 //
 
 import UIKit
-import CoreData
+import RealmSwift
 
 class CategoryViewController: UITableViewController {
-
-    var catArray = [Category]()
-    let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
+    let realm = try! Realm()
+    var catArray : Results<Category>?
+    
     override func viewDidLoad() {
         super.viewDidLoad()
-        fetchRequest()
+       loadCatgories()
         // Uncomment the following line to preserve selection between presentations
         // self.clearsSelectionOnViewWillAppear = false
 
@@ -23,12 +23,12 @@ class CategoryViewController: UITableViewController {
         // self.navigationItem.rightBarButtonItem = self.editButtonItem
     }
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return catArray.count
+        return catArray?.count ?? 1
     }
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "CategoryCell", for: indexPath)
-        let cat = catArray[indexPath.row]
-        cell.textLabel?.text = cat.name
+     
+        cell.textLabel?.text = catArray?[indexPath.row].name ?? "No Categories added"
         return cell
     }
     
@@ -38,23 +38,20 @@ class CategoryViewController: UITableViewController {
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         let destinationVC = segue.destination as! TodoListViewController
         if let indexPath = tableView.indexPathForSelectedRow {
-            destinationVC.selectedCategory = catArray[indexPath.row]
+            destinationVC.selectedCategory = catArray?[indexPath.row]
         }
     }
     
-   func fetchRequest (with request : NSFetchRequest<Category> = Category.fetchRequest()){
-    do{
-       
-        catArray = try context.fetch(request)
-        
-    } catch{
-        print("Error fetching category \(error)")
-    }
-    
-    }
-    func saveContext(){
+   func loadCatgories() {
+     catArray = realm.objects(Category.self)
+    tableView.reloadData()
+     }
+ 
+    func saveCategories(category: Category){
         do{
-            try context.save()
+            try realm.write {
+                realm.add(category)
+            }
         }catch{
             print ("Error saving category Context \(error)")
         }
@@ -63,10 +60,9 @@ class CategoryViewController: UITableViewController {
         var textField = UITextField()
         let alert = UIAlertController(title: "Categories", message: "Enter the category", preferredStyle: UIAlertControllerStyle.alert)
         let action = UIAlertAction(title: "Add Category", style: UIAlertActionStyle.default) { (action) in
-            let cat = Category(context: self.context)
+            let cat = Category()
             cat.name = textField.text!
-            self.catArray.append(cat)
-            self.saveContext()
+            self.saveCategories(category: cat)
             self.tableView.reloadData()
             
         }
